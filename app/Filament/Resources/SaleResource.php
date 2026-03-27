@@ -48,11 +48,12 @@ class SaleResource extends Resource
                             ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->brand} {$record->model} - Patente: {$record->plate}")
                             ->placeholder('Buscar por marca, modelo o patente...')
                             ->required()
-                            ->reactive() 
-                            ->afterStateUpdated(function ($state, Set $set) {
+                            ->live() 
+                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                 $car = Car::find($state);
                                 if ($car) {
                                     $set('total_amount', $car->price); 
+                                    self::calculateInstallment($get, $set); 
                                 }
                             }),
 
@@ -62,14 +63,16 @@ class SaleResource extends Resource
                             ->prefix('$')
                             ->numeric()
                             ->required()
-                            ->reactive(), 
+                            ->live(onBlur: true) 
+                            ->afterStateUpdated(fn (Get $get, Set $set) => self::calculateInstallment($get, $set)),
 
                         Forms\Components\TextInput::make('down_payment')
                             ->label('Entrega Inicial (Anticipo)')
                             ->prefix('$')
                             ->numeric()
                             ->default(0)
-                            ->reactive(), 
+                            ->live(onBlur: true) 
+                            ->afterStateUpdated(fn (Get $get, Set $set) => self::calculateInstallment($get, $set)),
 
                         Forms\Components\Select::make('payment_method')
                             ->label('Forma de Pago (Entrega)')
@@ -96,25 +99,25 @@ class SaleResource extends Resource
                             ->default(1)
                             ->minValue(1)
                             ->required()
-                            ->reactive(), 
+                            ->live(onBlur: true) 
+                            ->afterStateUpdated(fn (Get $get, Set $set) => self::calculateInstallment($get, $set)),
 
                         Forms\Components\TextInput::make('interest_rate')
                             ->label('Interés (%)')
                             ->suffix('%')
                             ->numeric()
                             ->default(0)
-                            ->reactive(), 
+                            ->live(onBlur: true) 
+                            ->afterStateUpdated(fn (Get $get, Set $set) => self::calculateInstallment($get, $set)),
 
                         Forms\Components\TextInput::make('installment_value')
                             ->label('Valor Estimado de Cuota')
                             ->prefix('$')
                             ->readOnly() 
                             ->dehydrated() 
-                            ->reactive()
                             ->afterStateHydrated(function (Set $set, Get $get) {
                                 self::calculateInstallment($get, $set);
-                            })
-                            ->key('installment_calulator'),
+                            }),
                             
                         Forms\Components\Textarea::make('guarantor_info')
                             ->label('Datos del Garante (Opcional)')
