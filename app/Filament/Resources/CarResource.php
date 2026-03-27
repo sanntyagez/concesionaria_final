@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Support\Enums\Alignment; // <--- IMPORTANTE: Agregado para alinear a la derecha
 
 class CarResource extends Resource
 {
@@ -51,7 +52,7 @@ class CarResource extends Resource
                             ->label('Precio de Lista')
                             ->required()
                             ->numeric()
-                            ->prefix('$ '), // Pone el signo pesos
+                            ->prefix('$ '),
                         
                         Forms\Components\Select::make('status')
                             ->label('Estado')
@@ -96,7 +97,8 @@ class CarResource extends Resource
                 
                 Tables\Columns\TextColumn::make('price')
                     ->label('Precio')
-                    ->money('ARS') // Formato moneda argentina
+                    ->money('ARS', locale: 'es_AR') // Formato argentino ($ 1.500.000,00)
+                    ->alignment(Alignment::End) // Alineado a la derecha
                     ->sortable(),
                 
                 Tables\Columns\TextColumn::make('status')

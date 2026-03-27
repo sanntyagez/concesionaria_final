@@ -4,14 +4,14 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SaleResource\Pages;
 use App\Models\Sale;
-use App\Models\Car; // Importante para buscar autos
+use App\Models\Car; 
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Forms\Get; // Para leer valores en vivo
-use Filament\Forms\Set; // Para escribir valores en vivo
+use Filament\Forms\Get; 
+use Filament\Forms\Set; 
 use App\Filament\Resources\SaleResource\RelationManagers\PaymentsRelationManager;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -19,7 +19,7 @@ class SaleResource extends Resource
 {
     protected static ?string $model = Sale::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-currency-dollar'; // Ícono de billete
+    protected static ?string $navigationIcon = 'heroicon-o-currency-dollar'; 
     
     protected static ?string $navigationLabel = 'Ventas';
 
@@ -31,25 +31,28 @@ class SaleResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Detalles de la Operación')
                     ->schema([
-                        // Selección de Cliente
+                        // --- 1. CLIENTE ---
                         Forms\Components\Select::make('client_id')
-                            ->relationship('client', 'name')
-                            ->label('Cliente')
-                            ->searchable()
-                            ->preload()
+                            ->label('Cliente *')
+                            ->relationship('client', 'name') 
+                            ->searchable(['name', 'dni']) 
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->name} - DNI: {$record->dni}")
+                            ->placeholder('Buscar por nombre o DNI...') 
                             ->required(),
 
-                        // Selección de Auto (Solo muestra los DISPONIBLES)
+                        // --- 2. AUTO ---
                         Forms\Components\Select::make('car_id')
-                            ->label('Vehículo')
-                            ->options(Car::where('status', 'available')->pluck('model', 'id')) // Muestra Modelo
-                            ->searchable()
+                            ->label('Vehículo *')
+                            ->relationship('car', 'model', fn (Builder $query) => $query->where('status', 'available'))
+                            ->searchable(['model', 'brand', 'plate']) 
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->brand} {$record->model} - Patente: {$record->plate}")
+                            ->placeholder('Buscar por marca, modelo o patente...')
                             ->required()
-                            ->reactive() // Si cambia, busca el precio
+                            ->reactive() 
                             ->afterStateUpdated(function ($state, Set $set) {
                                 $car = Car::find($state);
                                 if ($car) {
-                                    $set('total_amount', $car->price); // Pone el precio solo
+                                    $set('total_amount', $car->price); 
                                 }
                             }),
 
@@ -59,14 +62,14 @@ class SaleResource extends Resource
                             ->prefix('$')
                             ->numeric()
                             ->required()
-                            ->reactive(), // Reactivo para recalcular cuotas
+                            ->reactive(), 
 
                         Forms\Components\TextInput::make('down_payment')
                             ->label('Entrega Inicial (Anticipo)')
                             ->prefix('$')
                             ->numeric()
                             ->default(0)
-                            ->reactive(), // Reactivo
+                            ->reactive(), 
 
                         Forms\Components\Select::make('payment_method')
                             ->label('Forma de Pago (Entrega)')
@@ -93,26 +96,24 @@ class SaleResource extends Resource
                             ->default(1)
                             ->minValue(1)
                             ->required()
-                            ->reactive(), // Reactivo
+                            ->reactive(), 
 
                         Forms\Components\TextInput::make('interest_rate')
                             ->label('Interés (%)')
                             ->suffix('%')
                             ->numeric()
                             ->default(0)
-                            ->reactive(), // Reactivo
+                            ->reactive(), 
 
-                        // CAMPO MÁGICO: Muestra cuánto va a pagar por mes
                         Forms\Components\TextInput::make('installment_value')
                             ->label('Valor Estimado de Cuota')
                             ->prefix('$')
-                            ->readOnly() // No se edita a mano, se calcula solo
-                            ->dehydrated() // Se guarda en la BD
+                            ->readOnly() 
+                            ->dehydrated() 
                             ->reactive()
                             ->afterStateHydrated(function (Set $set, Get $get) {
                                 self::calculateInstallment($get, $set);
                             })
-                            // Escucha cambios en los otros campos
                             ->key('installment_calulator'),
                             
                         Forms\Components\Textarea::make('guarantor_info')
@@ -123,7 +124,6 @@ class SaleResource extends Resource
             ]);
     }
 
-    // Función auxiliar para calcular la cuota en vivo
     public static function calculateInstallment(Get $get, Set $set): void
     {
         $total = floatval($get('total_amount'));
@@ -134,9 +134,7 @@ class SaleResource extends Resource
         if ($cuotas > 0) {
             $saldo = $total - $down;
             
-            // Si hay saldo a financiar
             if ($saldo > 0) {
-                // Aplicamos interés simple al saldo: (Saldo + %) / Cuotas
                 $montoConInteres = $saldo * (1 + ($interes / 100));
                 $valorCuota = $montoConInteres / $cuotas;
                 
@@ -168,7 +166,6 @@ class SaleResource extends Resource
                     ->label('Total Venta')
                     ->money('ARS'),
                 
-                // Progreso de Cuotas (Ej: 12 / 1)
                 Tables\Columns\TextColumn::make('installments_progress')
                     ->label('Cuotas (Total/Pagas)')
                     ->getStateUsing(function (Sale $record) {
@@ -180,7 +177,6 @@ class SaleResource extends Resource
                         $record->payments()->whereNotNull('paid_at')->count() >= $record->installments_count ? 'success' : 'info'
                     ),
 
-                // Estado (Al día / Atrasado)
                 Tables\Columns\TextColumn::make('payment_status')
                     ->label('Estado')
                     ->getStateUsing(function (Sale $record) {
@@ -195,7 +191,6 @@ class SaleResource extends Resource
                     ->icon(fn (string $state): string => $state === 'Atrasado' ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle'),
             ])
             ->filters([
-                // --- AQUÍ ESTÁ TU FILTRO NUEVO ---
                 Tables\Filters\SelectFilter::make('estado_pago')
                     ->label('Filtrar por Estado')
                     ->options([
@@ -230,7 +225,7 @@ class SaleResource extends Resource
     {
        return [
         PaymentsRelationManager::class,
-          ];
+       ];
     }
 
     public static function getPages(): array
