@@ -9,7 +9,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Payment; 
-use Filament\Support\Enums\Alignment; // Importante para que no de error la alineación
+use Filament\Support\Enums\Alignment; 
+use Filament\Resources\Components\Tab;
 
 class PaymentsRelationManager extends RelationManager
 {
@@ -58,7 +59,6 @@ class PaymentsRelationManager extends RelationManager
                     ->sortable()
                     ->color(fn ($record) => $record->due_date < now() && !$record->paid_at ? 'danger' : 'gray'),
 
-                // ACÁ ESTÁ EL CAMBIO: Moneda en ARS, alineado a la derecha y SIN el summarize
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Monto')
                     ->money('ARS', locale: 'es_AR')
@@ -80,9 +80,7 @@ class PaymentsRelationManager extends RelationManager
                     }),
             ])
             ->filters([
-                Tables\Filters\Filter::make('pendientes')
-                    ->query(fn (Builder $query) => $query->whereNull('paid_at'))
-                    ->label('Solo Pendientes'),
+                // Filtro viejo borrado para usar los Tabs
             ])
             ->headerActions([
                 // No permitimos crear cuotas a mano, solo editarlas (cobrar)
@@ -146,5 +144,22 @@ class PaymentsRelationManager extends RelationManager
             ->bulkActions([
                 //
             ]);
+    }
+
+    // --- ACÁ ESTÁN LAS PESTAÑAS (TABS) ---
+    public function getTabs(): array
+    {
+        return [
+            'todas' => Tab::make('Todas las Cuotas')
+                ->icon('heroicon-m-list-bullet'),
+                
+            'saldadas' => Tab::make('Saldadas')
+                ->icon('heroicon-m-check-circle')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('paid_at')),
+                
+            'pendientes' => Tab::make('Pendientes')
+                ->icon('heroicon-m-clock')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('paid_at')),
+        ];
     }
 }

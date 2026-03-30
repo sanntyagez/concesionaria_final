@@ -16,4 +16,10 @@ class EditClient extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    // Redirección al listado tras guardar cambios
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

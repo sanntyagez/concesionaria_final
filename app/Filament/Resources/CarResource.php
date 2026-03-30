@@ -115,14 +115,14 @@ class CarResource extends Resource
                         'sold' => 'Vendido',
                     }),
             ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->label('Filtrar por Estado')
-                    ->options([
-                        'available' => 'Disponible',
-                        'sold' => 'Vendido',
-                    ]),
-            ])
+            //->filters([
+              //  Tables\Filters\SelectFilter::make('status')
+                  //  ->label('Filtrar por Estado')
+                    //->options([
+                      //  'available' => 'Disponible',
+                        //'sold' => 'Vendido',
+               //]),
+           // ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
